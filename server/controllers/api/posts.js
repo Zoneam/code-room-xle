@@ -40,16 +40,6 @@ async function createNewPost(req, res) {
 }
 
 
-function validatePostData(data) {
-  // Make sure the data is an object
-  if (typeof data !== "object") {
-    throw new Error("Invalid data: data must be an object");
-  }
-  // Return the data if it is valid
-  return data;
-}
-
-
 // Get all my posts
 async function getMyPosts(req, res) {
   const posts = await Post.find({ author: req.user._id });
@@ -77,6 +67,7 @@ async function addLike(req, res) {
 
 //Add User Like 
 async function addUserLike(req, res) {
+  console.log(req.params.postId)
   Like.findOne({ post: req.params.postId }, async function(err,found){
     if(!found.users.includes(req.user._id)){
         found.users.push(req.user._id);
@@ -85,17 +76,18 @@ async function addUserLike(req, res) {
         found.users.splice(found.users.indexOf(req.user._id),1)
        await found.save();
     }
-    Post.find({author: req.params.userId})
+  Post.find({$and:[{ public: true }, {author: req.params.userId}]})
   .populate("likes")
   .populate("author")
-  .exec(function (err, posts) {
-    res.json(posts);
+  .exec(function (err, post) {
+    res.json(post);
   });
 })
 }
 
 //Add User Like  to favorite posts
 async function addUserFavoriteLike(req, res) {
+
   Like.findOne({ post: req.params.postId }, async function(err,found){
     if(!found.users.includes(req.user._id)){
         found.users.push(req.user._id);
@@ -116,10 +108,9 @@ async function addUserFavoriteLike(req, res) {
 })
 }
 
-
 // Get full post page
 async function getFullPost(req, res) {
-  await Post.findOne({ _id: req.params.id })
+   Post.findOne({ _id: req.params.id })
   .populate("author")
   .exec(function (err, post) {
      post.comments = post.comments.reverse(); 
@@ -167,7 +158,8 @@ async function deletePost(req, res) {
 
 // Get all user posts
 async function getUserPosts(req, res) {
-  await Post.find({$and:[{ public: true }, {author: req.params.id}]})
+
+   Post.find({$and:[{ public: true }, {author: req.params.id}]})
   .populate("author")
   .populate("likes")
   .exec(function (err, posts) {
@@ -177,14 +169,13 @@ async function getUserPosts(req, res) {
 
 // Get all user favorite posts
 async function getUserFavoritePosts(req, res) {
-  await Post.find({})
+  Post.find({})
   .populate("likes")
   .populate("author")
   .exec(function (err, posts) {
     let favoritePosts = posts.filter((post)=>{
       return post.likes.users.includes(req.user._id)
     })
-    console.log(favoritePosts);
     res.json(favoritePosts); 
   });
 }
